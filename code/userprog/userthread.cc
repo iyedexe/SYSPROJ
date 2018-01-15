@@ -5,6 +5,7 @@
 #include "addrspace.h"
 #include "thread.h"
 #include "syscall.h"
+#include <stdio.h>
 
 extern Machine *machine;
 extern Thread *currentThread;
@@ -19,8 +20,9 @@ static void StartUserThread(int f){
    machine->WriteRegister (PCReg, farg->f);
    machine->WriteRegister (NextPCReg, farg->f + 4);
    machine->WriteRegister(4, farg->arg);
-
-   machine->WriteRegister (StackReg, currentThread->space->getNextThreadSpace());
+   int stackPointer = currentThread->space->getNextThreadSpace();
+   ASSERT(stackPointer != -1)
+   machine->WriteRegister (StackReg, stackPointer);
    //printf("arguments VS passed : %d , %d\n",machine->ReadRegister(4), farg->arg );
 //   printf("Thread ID: %d \n", currentThread->getId() );
 
@@ -41,8 +43,8 @@ int do_UserThreadCreate(int f, int arg){
 //  printf("arguments passed : %d , %d\n",f, arg );
   newThread->space = currentThread->space;
   newThread->setId(currentThread->space->GetTid());
-
   currentThread->space->newUserThread();
+
   //printf("thread number  : %d \n",currentThread->space->getThreadNumber() );
   //initialize it and place it in the threads queue
   newThread->Fork(StartUserThread,(int)farg);
@@ -56,8 +58,13 @@ void do_UserThreadExit(){
 
   //un thread de moins
   currentThread->space->deleteUserThread();
+  //printf("id thread : <%d>" ,currentThread->getId());
+  currentThread->space->threadBitMap->Clear(currentThread->getId());
   currentThread->space->freeEndMain();
+  currentThread->space->RemoveTid();
+
   currentThread->space->semThreadJoin[currentThread->getId()]->V();
+
   currentThread->Finish();
   //}
 

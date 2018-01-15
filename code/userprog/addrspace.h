@@ -16,9 +16,10 @@
 #include "copyright.h"
 #include "filesys.h"
 #include "synch.h"
+#include "bitmap.h"
 
 #define UserStackSize		1024	// increase this as necessary!
-#define threadPages 3
+#define threadPages 2
 
 
 class Semaphore;
@@ -45,15 +46,18 @@ class AddrSpace
     void newUserThread();
     void deleteUserThread();
     int getNextThreadSpace();
-    void do_Exit();
-    Semaphore *semStackAllocation;
-    int allocatedThreads;
+
+    BitMap *threadBitMap;
+    Semaphore *semBitMap;
+
+    //int allocatedThreads;
 
     Semaphore *semEndMain;
     void lockEndMain();
     void freeEndMain();
 
     int GetTid();
+    void RemoveTid();
     Semaphore* semThreadId;
     int tidCount;
     int MaxThreadNumber;

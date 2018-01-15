@@ -133,13 +133,18 @@ AddrSpace::AddrSpace (OpenFile * executable)
 			      noffH.initData.size, noffH.initData.inFileAddr);
       }
       tidCount =0; // ID threads used for user join and returned at creation
-      allocatedThreads = 1; // number of allocated threads used for proper stack management
       threadNumber = 1; //Number of active threads
-      semStackAllocation = new Semaphore("semStackAllocation",1); //for stack allocation
       semThreadNumber = new Semaphore("semThreadNumber",1); //for mutual exclusion on threadNumber
       semEndMain = new Semaphore("semMainEnd",0); // to lock the main if its sons hav not exited yet
       semThreadId = new Semaphore("semThreadId",1); // for mutual exclusion on TID handling
-      for(int ij=0;ij<10;ij++){ // semaphore table for join calls
+
+      int lengthBitMap = (int)(UserStackSize/(threadPages*PageSize)); // max number of threads
+      printf("max threads : <%d>\n",lengthBitMap );
+      threadBitMap = new BitMap(lengthBitMap); // Creates a bitmap with the max number of threads
+      threadBitMap->Mark(0); // Marks the main thread stack as taken
+      semBitMap = new Semaphore("semBitMap",1); //for stack allocation
+
+      for(int ij=0;ij<lengthBitMap;ij++){ // semaphore table for join calls
         this->semThreadJoin[ij] = new Semaphore("semThreadJoin",0);
       }
 
@@ -277,12 +282,19 @@ AddrSpace::deleteUserThread(){
 
 int
 AddrSpace::getNextThreadSpace() {
-  semStackAllocation->P();
+//VERSION avec BitMap
+  semBitMap->P();
 
   int baseAdress = (numPages*PageSize);
-  int toReturn = baseAdress - (PageSize*threadPages*(allocatedThreads));
-  allocatedThreads++;
-  semStackAllocation->V();
+  int toReturn = 0;
+  int find = threadBitMap->Find();
+  if (find == -1){
+    toReturn = -1;
+  }
+  else{
+    toReturn = baseAdress - (PageSize*threadPages*(find));
+  }
+  semBitMap->V();
 
   return toReturn;
 }
@@ -304,8 +316,16 @@ AddrSpace::GetTid(){
     return tidCount;
   }
 
+
 int 
 AddrSpace::getSpaceAllocation(){return spaceAllocation;}
 
 void 
 AddrSpace::setSpaceAllocation(int i){this->spaceAllocation = i;}
+
+void
+AddrSpace::RemoveTid(){
+      semThreadId->P();
+      tidCount--;
+      semThreadId->V();
+}
