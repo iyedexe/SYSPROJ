@@ -41,7 +41,7 @@ int do_UserThreadCreate(int f, int arg){
   farg->f = f;
   farg->arg = arg;
 //  printf("arguments passed : %d , %d\n",f, arg );
-  newThread->space = currentThread->space; // NOT SURE
+  newThread->space = currentThread->space;
   newThread->setId(currentThread->space->GetTid());
 
   currentThread->space->newUserThread();
