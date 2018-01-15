@@ -40,9 +40,11 @@
 #include "copyright.h"
 #include "utility.h"
 
+
 #ifdef USER_PROGRAM
 #include "machine.h"
 #include "addrspace.h"
+#define NumTotalRegs    40
 #endif
 
 // CPU register state to be saved on context switch.

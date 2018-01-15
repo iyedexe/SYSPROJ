@@ -31,6 +31,8 @@ class AddrSpace
     // stored in the file "executable"
     ~AddrSpace ();		// De-allocate an address space
 
+    void ReadAtVirtual(OpenFile*, int, int, int, TranslationEntry*, unsigned);
+
     void InitRegisters ();	// Initialize user-level CPU registers,
     // before jumping to user code
 
@@ -56,6 +58,10 @@ class AddrSpace
     int tidCount;
     int MaxThreadNumber;
     Semaphore* semThreadJoin[10];
+
+    int getSpaceAllocation();
+    void setSpaceAllocation(int i);
+
 /*
     int liveThreads; // number of currently running threads
     Semaphore *semLiveThreads; // protect the use of liveThreads
@@ -70,6 +76,7 @@ class AddrSpace
     // for now!
     unsigned int numPages;	// Number of pages in the virtual
     // address space
+    int spaceAllocation;
 };
 
 #endif // ADDRSPACE_H

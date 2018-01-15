@@ -16,8 +16,6 @@ static void StartUserThread(int f){
    currentThread->space->InitRegisters();
    currentThread->space->RestoreState();
 
-
-
    machine->WriteRegister (PCReg, farg->f);
    machine->WriteRegister (NextPCReg, farg->f + 4);
    machine->WriteRegister(4, farg->arg);

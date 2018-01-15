@@ -25,7 +25,7 @@
 #include "utility.h"
 #include "translate.h"
 #include "disk.h"
-//#include "synch.h"
+#include "synch.h"
 
 // Definitions related to the size, and format of user memory
 
@@ -57,6 +57,8 @@ enum ExceptionType { NoException,           // Everything ok!
 // more because we need to be able to start/stop a user program between
 // any two instructions (thus we need to keep track of things like load
 // delay slots, etc.)
+
+class Semaphore;
 
 #define StackReg	29	// User's stack pointer
 #define RetAddrReg	31	// Holds return address for procedure calls
@@ -182,11 +184,17 @@ class Machine {
     TranslationEntry *pageTable;
     unsigned int pageTableSize;
 
+    Semaphore* semProcessNumber;
+    int getProcessNumber();
+    void newProcess();
+    void deleteProcess();
+
   private:
     bool singleStep;		// drop back into the debugger after each
 				// simulated instruction
     int runUntilTime;		// drop back into the debugger when simulated
 				// time reaches this value
+    int processNumber;
 };
 
 extern void ExceptionHandler(ExceptionType which);

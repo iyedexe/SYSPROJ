@@ -21,6 +21,7 @@
 #include "noff.h"
 #include <stdio.h>
 #include <strings.h>		/* for bzero */
+#include "frameprovider.h"
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -84,12 +85,24 @@ AddrSpace::AddrSpace (OpenFile * executable)
 
     DEBUG ('a', "Initializing address space, num pages %d, size %d\n",
 	   numPages, size);
-// first, set up the translation
+
     pageTable = new TranslationEntry[numPages];
+    FrameProvider* frameprovider = new FrameProvider(numPages);
+    int store[numPages];
+
+    for(i = 0; i < numPages; i++)
+    {
+      if((store[i] = frameprovider->GetEmptyFrame()) == -1)
+      {
+        fprintf(stderr, "%s", "Not enough space for the process.\n");
+        setSpaceAllocation(-1);
+      }
+    }
+
     for (i = 0; i < numPages; i++)
       {
 	  pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	  pageTable[i].physicalPage = i;
+	  pageTable[i].physicalPage = store[i];
 	  pageTable[i].valid = TRUE;
 	  pageTable[i].use = FALSE;
 	  pageTable[i].dirty = FALSE;
@@ -130,6 +143,40 @@ AddrSpace::AddrSpace (OpenFile * executable)
         this->semThreadJoin[ij] = new Semaphore("semThreadJoin",0);
       }
 
+}
+
+void 
+AddrSpace::ReadAtVirtual( OpenFile *executable, int virtualaddr, int numBytes, int position, TranslationEntry *new_pageTable,
+                    unsigned new_numPages) 
+{
+    /*Save of the former page_table*/
+    TranslationEntry* former_pageTable = machine->pageTable;
+    machine->pageTable = new_pageTable;
+
+    /*Save of the former numPages*/
+    unsigned int former_numPages = machine->pageTableSize;
+    machine->pageTableSize = new_numPages; //numPages = size
+
+    char save[numBytes];
+    /*Save inside the buffer*/
+    int verif;
+
+    if((verif = executable->ReadAt(save, numBytes, position) != numBytes))
+    {
+        fprintf(stderr, "%s", "Error when reading the memory\n");
+    }
+
+    /*Writing back into the memory*/
+    for (int i = 0; i < numBytes; i++)
+    {
+        if(machine->WriteMem(virtualaddr + i, sizeof(char), save[i]) != TRUE) //sizeof(char) = 1
+        {
+          fprintf(stderr, "%s", "Error when Writing in the meory\n");
+        }
+    }
+
+    machine->pageTable = former_pageTable;
+    machine->pageTableSize = former_numPages;
 }
 
 //----------------------------------------------------------------------
@@ -189,6 +236,8 @@ AddrSpace::InitRegisters ()
 void
 AddrSpace::SaveState ()
 {
+  pageTable = machine->pageTable;
+  numPages = machine->pageTableSize;
 }
 
 //----------------------------------------------------------------------
@@ -254,3 +303,9 @@ AddrSpace::GetTid(){
     semThreadId->V();
     return tidCount;
   }
+
+int 
+AddrSpace::getSpaceAllocation(){return spaceAllocation;}
+
+void 
+AddrSpace::setSpaceAllocation(int i){this->spaceAllocation = i;}

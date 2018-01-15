@@ -7,7 +7,6 @@
 
 #include "copyright.h"
 #include "system.h"
-#include "../machine/synchconsole.h"
 // This defines *all* of the global data structures used by Nachos.
 // These are all initialized and de-allocated by this file.
 
@@ -28,14 +27,9 @@ SynchDisk *synchDisk;
 #endif
 
 #ifdef USER_PROGRAM		// requires either FILESYS or FILESYS_STUB
-Machine *machine;		// user program memory and registers
-#endif
-
-#ifdef CHANGED
-#ifdef USER_PROGRAM		// requires either FILESYS or FILESYS_STUB
-//Machine *machine;		// user program memory and registers
-SynchConsole *synchconsole;		// synchronous console
-#endif
+Machine *machine;       // user program memory and registers
+SynchConsole *synchconsole;     // synchronous console
+FrameProvider *frameprovider;
 #endif
 
 

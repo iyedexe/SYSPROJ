@@ -52,6 +52,8 @@ void CheckEndian()
 //		is executed.
 //----------------------------------------------------------------------
 
+class Semaphore;
+
 Machine::Machine(bool debug)
 {
 
@@ -72,8 +74,29 @@ Machine::Machine(bool debug)
     pageTable = NULL;
 #endif
 
+    processNumber = 0;
+    semProcessNumber = new Semaphore("semProcessNumber", 1);
     singleStep = debug;
     CheckEndian();
+}
+
+int
+Machine::getProcessNumber(){
+  return processNumber;
+}
+
+void
+Machine::newProcess(){
+  semProcessNumber->P();
+  processNumber++;
+  semProcessNumber->V();
+}
+
+void
+Machine::deleteProcess(){
+  semProcessNumber->P();
+  processNumber--;
+  semProcessNumber->V();
 }
 
 //----------------------------------------------------------------------

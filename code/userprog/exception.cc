@@ -26,6 +26,7 @@
 #include "syscall.h"
 #include "../machine/synchconsole.h"
 #include "userthread.h"
+#include "forkexec.h"
 
 extern void SynchPutChar(const char cr);
 extern SynchConsole *synchconsole;
@@ -177,6 +178,13 @@ ExceptionHandler (ExceptionType which)
             do_UserThreadExit();
             break;
           }
+          case SC_ForkExec:{
+            char stg[MAX_STRING_SIZE];
+            copyStringFromMachine(4, stg, MAX_STRING_SIZE);
+            do_ForkExec(stg);
+            break;
+          }
+
           default:{
             printf ("Unexpected user mode exception %d %d\n", which, type);
             ASSERT (FALSE);
