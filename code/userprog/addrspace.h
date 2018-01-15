@@ -1,5 +1,5 @@
-// addrspace.h 
-//      Data structures to keep track of executing user programs 
+// addrspace.h
+//      Data structures to keep track of executing user programs
 //      (address spaces).
 //
 //      For now, we don't keep any information about address spaces.
@@ -7,7 +7,7 @@
 //      executing the user program (see thread.h).
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #ifndef ADDRSPACE_H
@@ -15,8 +15,13 @@
 
 #include "copyright.h"
 #include "filesys.h"
+#include "synch.h"
 
 #define UserStackSize		1024	// increase this as necessary!
+#define threadPages 3
+
+
+class Semaphore;
 
 class AddrSpace
 {
@@ -30,12 +35,40 @@ class AddrSpace
     // before jumping to user code
 
     void SaveState ();		// Save/restore address space-specific
-    void RestoreState ();	// info on a context switch 
+    void RestoreState ();	// info on a context switch
 
+    int threadNumber;
+    Semaphore *semThreadNumber;
+    int getThreadNumber();
+    void newUserThread();
+    void deleteUserThread();
+    int getNextThreadSpace();
+    void do_Exit();
+    Semaphore *semStackAllocation;
+    int allocatedThreads;
+
+    Semaphore *semEndMain;
+    void lockEndMain();
+    void freeEndMain();
+
+    int GetTid();
+    Semaphore* semThreadId;
+    int tidCount;
+    int MaxThreadNumber;
+    Semaphore* semThreadJoin[10];
+/*
+    int liveThreads; // number of currently running threads
+    Semaphore *semLiveThreads; // protect the use of liveThreads
+    void UpdateThreadCount(int i);
+
+    int isFinal();
+
+    int addNewThread();
+*/
   private:
       TranslationEntry * pageTable;	// Assume linear page table translation
     // for now!
-    unsigned int numPages;	// Number of pages in the virtual 
+    unsigned int numPages;	// Number of pages in the virtual
     // address space
 };
 

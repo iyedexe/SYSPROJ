@@ -1,5 +1,5 @@
 # Copyright (c) 1992 The Regents of the University of California.
-# All rights reserved.  See copyright.h for copyright notice and limitation 
+# All rights reserved.  See copyright.h for copyright notice and limitation
 # of liability and disclaimer of warranty provisions.
 # Copyright (c) 2011 Vincent Danjean <Vincent.Danjean@imag.fr>
 #
@@ -13,15 +13,15 @@
 # # if you want that initial nachos #
 # # still compile                   #
 # ###################################
-# 
+#
 # This file includes all of the baseline code provided by Nachos.
-# Whenever you add a .c or .cc file, put it in the appropriate 
+# Whenever you add a .c or .cc file, put it in the appropriate
 # source list and/or only to your own flavor
 #
 # The dependency graph between assignments is:
 #   1. THREADS (step3) before everything else
 #   2. USERPROG (step4) must come before VM
-#   3. USERPROG can come before or after FILESYS, but if USERPROG comes 
+#   3. USERPROG can come before or after FILESYS, but if USERPROG comes
 #	before (as in this distribution), then it must define FILESYS_STUB
 #
 #   Other than that, you have complete flexibility.
@@ -42,7 +42,7 @@ THREAD_SRC      :=      main.cc list.cc scheduler.cc synch.cc synchlist.cc \
                         stats.cc sysdep.cc timer.cc switch.S
 
 USERPROG_SRC    :=      addrspace.cc bitmap.cc exception.cc progtest.cc console.cc \
-                        machine.cc mipssim.cc translate.cc
+                        machine.cc mipssim.cc translate.cc synchconsole.cc userthread.cc
 
 VM_SRC          :=
 
@@ -128,4 +128,3 @@ $(eval $(call define-flavor,vm,userprog filesys-stub vm))
 
 # if file sys done first!
 # $(eval $(call define-flavor,vm,userprog filesys vm))
-

@@ -1,16 +1,18 @@
-// progtest.cc 
+//#ifdef CHANGED
+// progtest.cc
 //      Test routines for demonstrating that Nachos can load
-//      a user program and execute it.  
+//      a user program and execute it.
 //
 //      Also, routines for testing the Console hardware device.
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
 #include "system.h"
 #include "console.h"
+#include "synchconsole.h"
 #include "addrspace.h"
 #include "synch.h"
 
@@ -78,6 +80,7 @@ void
 ConsoleTest (char *in, char *out)
 {
     char ch;
+    int pos = 0;
 
     console = new Console (in, out, ReadAvail, WriteDone, 0);
     readAvail = new Semaphore ("read avail", 0);
@@ -87,9 +90,44 @@ ConsoleTest (char *in, char *out)
       {
 	  readAvail->P ();	// wait for character to arrive
 	  ch = console->GetChar ();
-	  console->PutChar (ch);	// echo it!
-	  writeDone->P ();	// wait for write to finish
-	  if (ch == 'q')
+    if (ch == EOF || ch == '\n'){
+      console->PutChar('>');
+      writeDone->P();
+      return;
+    }
+    else{
+      if (pos ==0){
+        console->PutChar ('<');
+        writeDone->P();
+        pos += 1;
+        console->PutChar (ch);	// echo it!
+	      writeDone->P ();	// wait for write to finish
+      }
+        else{
+        console->PutChar (ch);	// echo it!
+  	    writeDone->P ();	// wait for write to finish
+      }
+
+    if (ch == 'q')
 	      return;		// if q, quit
       }
+    }
 }
+
+//----------------------------------------------------------------------
+// Synchronous Console
+//      Test the console by echoing characters typed at the input onto
+//      the output.  Stop when the user types a 'q'.
+//----------------------------------------------------------------------
+ void
+
+SynchConsoleTest (char *in, char *out)
+ {
+   char ch;
+   SynchConsole *synchconsole = new SynchConsole(in, out);
+
+   while((ch = synchconsole->SynchGetChar()) != EOF)
+    synchconsole->SynchPutChar(ch);
+   fprintf(stderr, "Solaris : EOF detected in SynchConsole!\n");
+}
+//#endif //CHANGED

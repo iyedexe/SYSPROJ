@@ -1,9 +1,9 @@
-// addrspace.cc 
+// addrspace.cc
 //      Routines to manage address spaces (executing user programs).
 //
 //      In order to run a user program, you must:
 //
-//      1. link with the -N -T 0 option 
+//      1. link with the -N -T 0 option
 //      2. run coff2noff to convert the object file to Nachos format
 //              (Nachos object code format is essentially just a simpler
 //              version of the UNIX executable object code format)
@@ -12,19 +12,19 @@
 //              don't need to do this last step)
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
 #include "noff.h"
-
+#include <stdio.h>
 #include <strings.h>		/* for bzero */
 
 //----------------------------------------------------------------------
 // SwapHeader
-//      Do little endian to big endian conversion on the bytes in the 
+//      Do little endian to big endian conversion on the bytes in the
 //      object file header, in case the file was generated on a little
 //      endian machine, and we're now running on a big endian machine.
 //----------------------------------------------------------------------
@@ -53,7 +53,7 @@ SwapHeader (NoffHeader * noffH)
 //
 //      Assumes that the object code file is in NOFF format.
 //
-//      First, set up the translation from program memory to physical 
+//      First, set up the translation from program memory to physical
 //      memory.  For now, this is really simple (1:1), since we are
 //      only uniprogramming, and we have a single unsegmented page table
 //
@@ -84,7 +84,7 @@ AddrSpace::AddrSpace (OpenFile * executable)
 
     DEBUG ('a', "Initializing address space, num pages %d, size %d\n",
 	   numPages, size);
-// first, set up the translation 
+// first, set up the translation
     pageTable = new TranslationEntry[numPages];
     for (i = 0; i < numPages; i++)
       {
@@ -93,12 +93,12 @@ AddrSpace::AddrSpace (OpenFile * executable)
 	  pageTable[i].valid = TRUE;
 	  pageTable[i].use = FALSE;
 	  pageTable[i].dirty = FALSE;
-	  pageTable[i].readOnly = FALSE;	// if the code segment was entirely on 
-	  // a separate page, we could set its 
+	  pageTable[i].readOnly = FALSE;	// if the code segment was entirely on
+	  // a separate page, we could set its
 	  // pages to be read-only
       }
 
-// zero out the entire address space, to zero the unitialized data segment 
+// zero out the entire address space, to zero the unitialized data segment
 // and the stack segment
     bzero (machine->mainMemory, size);
 
@@ -118,6 +118,16 @@ AddrSpace::AddrSpace (OpenFile * executable)
 			      (machine->mainMemory
 			       [noffH.initData.virtualAddr]),
 			      noffH.initData.size, noffH.initData.inFileAddr);
+      }
+      tidCount =0; // ID threads used for user join and returned at creation
+      allocatedThreads = 1; // number of allocated threads used for proper stack management
+      threadNumber = 1; //Number of active threads
+      semStackAllocation = new Semaphore("semStackAllocation",1); //for stack allocation
+      semThreadNumber = new Semaphore("semThreadNumber",1); //for mutual exclusion on threadNumber
+      semEndMain = new Semaphore("semMainEnd",0); // to lock the main if its sons hav not exited yet
+      semThreadId = new Semaphore("semThreadId",1); // for mutual exclusion on TID handling
+      for(int ij=0;ij<10;ij++){ // semaphore table for join calls
+        this->semThreadJoin[ij] = new Semaphore("semThreadJoin",0);
       }
 
 }
@@ -195,3 +205,52 @@ AddrSpace::RestoreState ()
     machine->pageTable = pageTable;
     machine->pageTableSize = numPages;
 }
+
+
+int
+AddrSpace::getThreadNumber(){
+  return threadNumber;
+}
+
+void
+AddrSpace::newUserThread(){
+  semThreadNumber->P();
+  threadNumber++;
+  semThreadNumber->V();
+}
+
+void
+AddrSpace::deleteUserThread(){
+  semThreadNumber->P();
+  threadNumber--;
+  semThreadNumber->V();
+}
+
+int
+AddrSpace::getNextThreadSpace() {
+  semStackAllocation->P();
+
+  int baseAdress = (numPages*PageSize);
+  int toReturn = baseAdress - (PageSize*threadPages*(allocatedThreads));
+  allocatedThreads++;
+  semStackAllocation->V();
+
+  return toReturn;
+}
+
+
+void
+AddrSpace::lockEndMain(){
+  semEndMain->P();}
+
+void
+AddrSpace::freeEndMain(){
+  semEndMain->V();}
+
+int
+AddrSpace::GetTid(){
+    semThreadId->P();
+    tidCount++;
+    semThreadId->V();
+    return tidCount;
+  }
