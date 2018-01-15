@@ -77,7 +77,7 @@ Machine::Machine(bool debug)
 
     processNumber = 0;
     semProcessNumber = new Semaphore("semProcessNumber", 1);
-		frameProviderProcs = new FrameProvider((int)(MemorySize/PageSize));
+
 
 		singleStep = debug;
     CheckEndian();
@@ -112,7 +112,7 @@ Machine::~Machine()
     delete [] mainMemory;
     if (tlb != NULL)
         delete [] tlb;
-		delete frameProviderProcs;
+		//delete frameProviderProcs;
 }
 
 //----------------------------------------------------------------------

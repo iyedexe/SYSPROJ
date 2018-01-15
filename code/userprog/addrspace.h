@@ -63,6 +63,8 @@ class AddrSpace
     int getSpaceAllocation();
     void setSpaceAllocation(int i);
 
+//    FrameProvider *frameProviderProcs;
+
   private:
       TranslationEntry * pageTable;	// Assume linear page table translation
     // for now!

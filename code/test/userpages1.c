@@ -16,13 +16,13 @@ void f(void *s)
     int i;
     for (i = 0; i < N; i++)
     	puts((char *)s);
-    UserThreadExit();
+//    UserThreadExit();
 }
 
 int main()
 {
     UserThreadCreate(f, (void *) THIS);
     f((void*) THAT);
-    Halt();
+  //  Halt();
     return 1;
 }

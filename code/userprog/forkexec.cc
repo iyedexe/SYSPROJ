@@ -9,7 +9,6 @@ static void StartForkedProcess(int arg) {
 
     currentThread->space->RestoreState();
     currentThread->space->InitRegisters();
-    //currentThread->space->InitMainThread();
     machine->Run();
 }
 
@@ -32,20 +31,14 @@ int do_ForkExec (char *filename)
         return -1;
     }
 
-    if(space->getSpaceAllocation() == -1)
-    {
-        fprintf(stderr, "%s", "Not enough space for the process\n");
-        return -1;
-    }
-
+    printf("XXXXXXXXXXX>>>>>>>>>>>FORKED<<<<<<<<<<<<<XXXXXXXXX\n" );
     SpaceContainer* sarg = new SpaceContainer; // comme pour les threads, on sérialise l'espace mémoir qu'on souhaite affecter à notre processus
     sarg->space = space;
     newThread->Fork(StartForkedProcess,(int)sarg); // on fork le processus père
 
     machine->newProcess();
-    delete space;
     delete executable;
-    
+
     return 0;
 }
 

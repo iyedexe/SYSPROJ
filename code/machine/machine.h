@@ -191,8 +191,7 @@ class Machine {
     int getProcessNumber();
     void newProcess();
     void deleteProcess();
-		FrameProvider *frameProviderProcs;
-
+		
   private:
     bool singleStep;		// drop back into the debugger after each
 				// simulated instruction

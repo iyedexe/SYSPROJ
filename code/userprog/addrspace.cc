@@ -23,6 +23,9 @@
 #include <strings.h>		/* for bzero */
 #include "frameprovider.h"
 
+
+static FrameProvider *frameProviderProcs = new FrameProvider((int)(MemorySize/PageSize));
+
 //----------------------------------------------------------------------
 // SwapHeader
 //      Do little endian to big endian conversion on the bytes in the
@@ -123,22 +126,10 @@ AddrSpace::AddrSpace (OpenFile * executable)
 	   numPages, size);
 
     pageTable = new TranslationEntry[numPages];
-    //FrameProvider* frameprovider = new FrameProvider(numPages);
-    int store[numPages];
-
-    for(i = 0; i < numPages; i++)
-    {
-      if((store[i] = machine->frameProviderProcs->GetEmptyFrame()) == -1)
-      {
-        fprintf(stderr, "%s", "Not enough space for the process.\n");
-        setSpaceAllocation(-1);
-      }
-    }
-
     for (i = 0; i < numPages; i++)
       {
 	  pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	  pageTable[i].physicalPage = store[i];
+	  pageTable[i].physicalPage = frameProviderProcs->GetEmptyFrame();
 	  pageTable[i].valid = TRUE;
 	  pageTable[i].use = FALSE;
 	  pageTable[i].dirty = FALSE;
@@ -218,7 +209,7 @@ AddrSpace::~AddrSpace ()
   // delete pageTable;
   // End of modification
   for (int i = 0; i < (int)numPages; i++){
-   machine->frameProviderProcs->ReleaseFrame(pageTable[i].physicalPage);
+   frameProviderProcs->ReleaseFrame(pageTable[i].physicalPage);
   }
    delete [] pageTable;
 }
