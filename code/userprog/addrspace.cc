@@ -46,113 +46,9 @@ SwapHeader (NoffHeader * noffH)
     noffH->uninitData.inFileAddr = WordToHost (noffH->uninitData.inFileAddr);
 }
 
-//----------------------------------------------------------------------
-// AddrSpace::AddrSpace
-//      Create an address space to run a user program.
-//      Load the program from a file "executable", and set everything
-//      up so that we can start executing user instructions.
-//
-//      Assumes that the object code file is in NOFF format.
-//
-//      First, set up the translation from program memory to physical
-//      memory.  For now, this is really simple (1:1), since we are
-//      only uniprogramming, and we have a single unsegmented page table
-//
-//      "executable" is the file containing the object code to load into memory
-//----------------------------------------------------------------------
-
-AddrSpace::AddrSpace (OpenFile * executable)
-{
-    NoffHeader noffH;
-    unsigned int i, size;
-
-    executable->ReadAt ((char *) &noffH, sizeof (noffH), 0);
-    if ((noffH.noffMagic != NOFFMAGIC) &&
-	(WordToHost (noffH.noffMagic) == NOFFMAGIC))
-	SwapHeader (&noffH);
-    ASSERT (noffH.noffMagic == NOFFMAGIC);
-
-// how big is address space?
-    size = noffH.code.size + noffH.initData.size + noffH.uninitData.size + UserStackSize;	// we need to increase the size
-    // to leave room for the stack
-    numPages = divRoundUp (size, PageSize);
-    size = numPages * PageSize;
-
-    ASSERT (numPages <= NumPhysPages);	// check we're not trying
-    // to run anything too big --
-    // at least until we have
-    // virtual memory
-
-    DEBUG ('a', "Initializing address space, num pages %d, size %d\n",
-	   numPages, size);
-
-    pageTable = new TranslationEntry[numPages];
-    FrameProvider* frameprovider = new FrameProvider(numPages);
-    int store[numPages];
-
-    for(i = 0; i < numPages; i++)
-    {
-      if((store[i] = frameprovider->GetEmptyFrame()) == -1)
-      {
-        fprintf(stderr, "%s", "Not enough space for the process.\n");
-        setSpaceAllocation(-1);
-      }
-    }
-
-    for (i = 0; i < numPages; i++)
-      {
-	  pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	  pageTable[i].physicalPage = store[i];
-	  pageTable[i].valid = TRUE;
-	  pageTable[i].use = FALSE;
-	  pageTable[i].dirty = FALSE;
-	  pageTable[i].readOnly = FALSE;	// if the code segment was entirely on
-	  // a separate page, we could set its
-	  // pages to be read-only
-      }
-
-// zero out the entire address space, to zero the unitialized data segment
-// and the stack segment
-    bzero (machine->mainMemory, size);
-
-// then, copy in the code and data segments into memory
-    if (noffH.code.size > 0)
-      {
-	  DEBUG ('a', "Initializing code segment, at 0x%x, size %d\n",
-		 noffH.code.virtualAddr, noffH.code.size);
-	  executable->ReadAt (&(machine->mainMemory[noffH.code.virtualAddr]),
-			      noffH.code.size, noffH.code.inFileAddr);
-      }
-    if (noffH.initData.size > 0)
-      {
-	  DEBUG ('a', "Initializing data segment, at 0x%x, size %d\n",
-		 noffH.initData.virtualAddr, noffH.initData.size);
-	  executable->ReadAt (&
-			      (machine->mainMemory
-			       [noffH.initData.virtualAddr]),
-			      noffH.initData.size, noffH.initData.inFileAddr);
-      }
-      tidCount =0; // ID threads used for user join and returned at creation
-      threadNumber = 1; //Number of active threads
-      semThreadNumber = new Semaphore("semThreadNumber",1); //for mutual exclusion on threadNumber
-      semEndMain = new Semaphore("semMainEnd",0); // to lock the main if its sons hav not exited yet
-      semThreadId = new Semaphore("semThreadId",1); // for mutual exclusion on TID handling
-
-      int lengthBitMap = (int)(UserStackSize/(threadPages*PageSize)); // max number of threads
-      printf("max threads : <%d>\n",lengthBitMap );
-      threadBitMap = new BitMap(lengthBitMap); // Creates a bitmap with the max number of threads
-      threadBitMap->Mark(0); // Marks the main thread stack as taken
-      semBitMap = new Semaphore("semBitMap",1); //for stack allocation
-
-      for(int ij=0;ij<lengthBitMap;ij++){ // semaphore table for join calls
-        this->semThreadJoin[ij] = new Semaphore("semThreadJoin",0);
-      }
-
-}
-
-void 
-AddrSpace::ReadAtVirtual( OpenFile *executable, int virtualaddr, int numBytes, int position, TranslationEntry *new_pageTable,
-                    unsigned new_numPages) 
+static void
+ReadAtVirtual( OpenFile *executable, int virtualaddr, int numBytes, int position, TranslationEntry *new_pageTable,
+                    unsigned new_numPages)
 {
     /*Save of the former page_table*/
     TranslationEntry* former_pageTable = machine->pageTable;
@@ -184,6 +80,129 @@ AddrSpace::ReadAtVirtual( OpenFile *executable, int virtualaddr, int numBytes, i
     machine->pageTableSize = former_numPages;
 }
 
+
+//----------------------------------------------------------------------
+// AddrSpace::AddrSpace
+//      Create an address space to run a user program.
+//      Load the program from a file "executable", and set everything
+//      up so that we can start executing user instructions.
+//
+//      Assumes that the object code file is in NOFF format.
+//
+//      First, set up the translation from program memory to physical
+//      memory.  For now, this is really simple (1:1), since we are
+//      only uniprogramming, and we have a single unsegmented page table
+//
+//      "executable" is the file containing the object code to load into memory
+//----------------------------------------------------------------------
+
+AddrSpace::AddrSpace (OpenFile * executable)
+{
+    NoffHeader noffH;
+    unsigned int i, size;
+
+
+    executable->ReadAt ((char *) &noffH, sizeof (noffH), 0);
+    if ((noffH.noffMagic != NOFFMAGIC) &&
+	(WordToHost (noffH.noffMagic) == NOFFMAGIC))
+	SwapHeader (&noffH);
+    ASSERT (noffH.noffMagic == NOFFMAGIC);
+
+// how big is address space?
+    size = noffH.code.size + noffH.initData.size + noffH.uninitData.size + UserStackSize;	// we need to increase the size
+    // to leave room for the stack
+    numPages = divRoundUp (size, PageSize);
+    size = numPages * PageSize;
+
+    ASSERT (numPages <= NumPhysPages);	// check we're not trying
+    // to run anything too big --
+    // at least until we have
+    // virtual memory
+
+    DEBUG ('a', "Initializing address space, num pages %d, size %d\n",
+	   numPages, size);
+
+    pageTable = new TranslationEntry[numPages];
+    //FrameProvider* frameprovider = new FrameProvider(numPages);
+    int store[numPages];
+
+    for(i = 0; i < numPages; i++)
+    {
+      if((store[i] = machine->frameProviderProcs->GetEmptyFrame()) == -1)
+      {
+        fprintf(stderr, "%s", "Not enough space for the process.\n");
+        setSpaceAllocation(-1);
+      }
+    }
+
+    for (i = 0; i < numPages; i++)
+      {
+	  pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+	  pageTable[i].physicalPage = store[i];
+	  pageTable[i].valid = TRUE;
+	  pageTable[i].use = FALSE;
+	  pageTable[i].dirty = FALSE;
+	  pageTable[i].readOnly = FALSE;	// if the code segment was entirely on
+	  // a separate page, we could set its
+	  // pages to be read-only
+      }
+
+      tidCount =0; // ID threads used for user join and returned at creation
+      threadNumber = 1; //Number of active threads
+      semThreadNumber = new Semaphore("semThreadNumber",1); //for mutual exclusion on threadNumber
+      semEndMain = new Semaphore("semMainEnd",0); // to lock the main if its sons hav not exited yet
+      semThreadId = new Semaphore("semThreadId",1); // for mutual exclusion on TID handling
+
+      int lengthBitMap = (int)(UserStackSize/(threadPages*PageSize)); // max number of threads
+      //     printf("max threads : <%d>\n",lengthBitMap );
+      threadBitMap = new BitMap(lengthBitMap); // Creates a bitmap with the max number of threads
+      threadBitMap->Mark(0); // Marks the main thread stack as taken
+      semBitMap = new Semaphore("semBitMap",1); //for stack allocation
+
+      for(int ij=0;ij<lengthBitMap;ij++){ // semaphore table for join calls
+        this->semThreadJoin[ij] = new Semaphore("semThreadJoin",0);
+      }
+
+
+// zero out the entire address space, to zero the unitialized data segment
+// and the stack segment
+
+//    bzero (machine->mainMemory, size);
+
+// then, copy in the code and data segments into memory
+    if (noffH.code.size > 0)
+      {
+	  DEBUG ('a', "Initializing code segment, at 0x%x, size %d\n",
+		 noffH.code.virtualAddr, noffH.code.size);
+        #ifndef CHANGED
+	  executable->ReadAt (&(machine->mainMemory[noffH.code.virtualAddr]),
+			      noffH.code.size, noffH.code.inFileAddr);
+        #else
+        ReadAtVirtual(executable, noffH.code.virtualAddr, noffH.code.size, noffH.code.inFileAddr, pageTable, numPages);
+        #endif //CHANGED
+
+
+      }
+    if (noffH.initData.size > 0)
+      {
+	  DEBUG ('a', "Initializing data segment, at 0x%x, size %d\n",
+		 noffH.initData.virtualAddr, noffH.initData.size);
+     #ifndef CHANGED
+	  executable->ReadAt (&
+			      (machine->mainMemory
+			       [noffH.initData.virtualAddr]),
+			      noffH.initData.size, noffH.initData.inFileAddr);
+      #else
+        ReadAtVirtual(executable, noffH.initData.virtualAddr, noffH.initData.size, noffH.initData.inFileAddr, pageTable, numPages);
+      #endif //CHANGED
+
+      }
+
+
+
+}
+
+
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
 //      Dealloate an address space.  Nothing for now!
@@ -191,10 +210,17 @@ AddrSpace::ReadAtVirtual( OpenFile *executable, int virtualaddr, int numBytes, i
 
 AddrSpace::~AddrSpace ()
 {
-  // LB: Missing [] for delete
+/*
+  for (unsigned j = 0; j < this->numPages; j++) {
+        frameprovider->ReleaseFrame(this->pageTable[j].physicalPage);
+  }
+  */// LB: Missing [] for delete
   // delete pageTable;
-  delete [] pageTable;
   // End of modification
+  for (int i = 0; i < (int)numPages; i++){
+   machine->frameProviderProcs->ReleaseFrame(pageTable[i].physicalPage);
+  }
+   delete [] pageTable;
 }
 
 //----------------------------------------------------------------------
@@ -317,10 +343,10 @@ AddrSpace::GetTid(){
   }
 
 
-int 
+int
 AddrSpace::getSpaceAllocation(){return spaceAllocation;}
 
-void 
+void
 AddrSpace::setSpaceAllocation(int i){this->spaceAllocation = i;}
 
 void

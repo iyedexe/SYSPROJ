@@ -33,6 +33,7 @@ static void StartUserThread(int f){
 
 
 int do_UserThreadCreate(int f, int arg){
+  //TODO verify if there"s enough stack
 
   //the current kernel thread must create a new thread newThread
   Thread *newThread = new Thread ("new Thread");
@@ -44,7 +45,9 @@ int do_UserThreadCreate(int f, int arg){
   newThread->space = currentThread->space;
   newThread->setId(currentThread->space->GetTid());
   currentThread->space->newUserThread();
-
+  if(currentThread->space->threadBitMap->NumClear()<=0){
+    return -1;
+  }
   //printf("thread number  : %d \n",currentThread->space->getThreadNumber() );
   //initialize it and place it in the threads queue
   newThread->Fork(StartUserThread,(int)farg);

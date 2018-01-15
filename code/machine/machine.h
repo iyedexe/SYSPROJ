@@ -25,8 +25,10 @@
 #include "utility.h"
 #include "translate.h"
 #include "disk.h"
+#ifdef CHANGED
 #include "synch.h"
-
+#include "frameprovider.h"
+#endif
 // Definitions related to the size, and format of user memory
 
 #define PageSize 	SectorSize 	// set the page size equal to
@@ -59,6 +61,7 @@ enum ExceptionType { NoException,           // Everything ok!
 // delay slots, etc.)
 
 class Semaphore;
+class FrameProvider;
 
 #define StackReg	29	// User's stack pointer
 #define RetAddrReg	31	// Holds return address for procedure calls
@@ -188,6 +191,7 @@ class Machine {
     int getProcessNumber();
     void newProcess();
     void deleteProcess();
+		FrameProvider *frameProviderProcs;
 
   private:
     bool singleStep;		// drop back into the debugger after each

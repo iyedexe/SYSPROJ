@@ -112,8 +112,11 @@ ExceptionHandler (ExceptionType which)
           case SC_Halt:{
             DEBUG ('a', "Shutdown, initiated by user program.\n");
             while(currentThread->space->getThreadNumber() > 1){
-          //    printf("still threads not free : %d \n", currentThread->space->getThreadNumber());
               currentThread->space->lockEndMain();
+            }
+            if(machine->getProcessNumber()> 0){
+              machine->deleteProcess();
+              currentThread->Finish();
             }
         	  interrupt->Halt ();
             break;

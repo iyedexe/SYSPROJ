@@ -1,12 +1,12 @@
 #ifndef FRAMEPROVIDER_H
 #define FRAMEPROVIDER_H
 
-#include "system.h"
+//#include "system.h"
 #include "addrspace.h"
 #include "bitmap.h"
 #include <strings.h>
 #include "filesys.h"
-#include "synch.h"    
+#include "synch.h"
 
 class FrameProvider
 {
@@ -20,7 +20,7 @@ class FrameProvider
         int NumAvailFrame(void);
 
     private:
-        BitMap* bitmap;
+        BitMap* MemBitMap;
         int numberOfFrame; // number of free frames in the bitmap
 };
 

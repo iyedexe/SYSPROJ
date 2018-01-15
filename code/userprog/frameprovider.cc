@@ -1,9 +1,13 @@
 #include "frameprovider.h"
+#include "synch.h"
+#include "system.h"
+
+static Semaphore* semMemBitMap = new Semaphore("semFrame",1);
 
 FrameProvider::FrameProvider(int nFrame)
 {
-  this->bitmap = new BitMap(nFrame);
-  this->numberOfFrame = bitmap->NumClear();
+  this->MemBitMap = new BitMap(nFrame);
+  this->numberOfFrame = MemBitMap->NumClear();
 
   if(this->numberOfFrame != nFrame)
     fprintf(stderr, "%s", "Error while initialising the number of free frame(s).\n");
@@ -11,34 +15,35 @@ FrameProvider::FrameProvider(int nFrame)
 
 FrameProvider::~FrameProvider()
 {
-  delete bitmap;
+  delete MemBitMap;
 }
 
-int 
+int
 FrameProvider::NumAvailFrame()
 {
-  return numberOfFrame;
+  return MemBitMap->NumClear();
 }
 
-int 
+int
 FrameProvider::GetEmptyFrame()
 {
-  if(NumAvailFrame() == 0){
+  semMemBitMap->P();
+  if(MemBitMap->NumClear() <= 0){
+    semMemBitMap->V();
     fprintf(stderr, "%s", "No space remaining.\n");
+    return -1;
   }
 
-  int frame = this->bitmap->Find(); //return -1 if full
+  int frame = MemBitMap->Find(); //return -1 if full
 
-  this->bitmap->Mark(frame);
   bzero(&(machine->mainMemory[PageSize * frame]), PageSize);
-
+  semMemBitMap->V();
   return frame;
 
 }
-        
-void 
+
+void
 FrameProvider::ReleaseFrame(int framePosition)
 {
-  bitmap->Clear(framePosition);
+  MemBitMap->Clear(framePosition);
 }
-

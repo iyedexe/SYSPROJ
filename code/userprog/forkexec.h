@@ -5,7 +5,11 @@
 #ifndef FORKEXEC_H
 #define FORKEXEC_H
 
-extern void StartForkedProcess (int arg);
+struct SpaceContainer{
+	AddrSpace* space;
+};
+
+//extern void StartForkedProcess (int arg);
 extern int do_ForkExec (char *filename);
 extern void do_Exit ();
 

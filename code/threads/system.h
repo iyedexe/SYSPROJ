@@ -17,7 +17,7 @@
 #include "timer.h"
 
 
-#define MAX_STRING_SIZE 20
+#define MAX_STRING_SIZE 64
 
 // Initialization and cleanup routines
 extern void Initialize (int argc, char **argv);	// Initialization,
@@ -32,12 +32,12 @@ extern Interrupt *interrupt;	// interrupt status
 extern Statistics *stats;	// performance metrics
 extern Timer *timer;		// the hardware alarm clock
 
+
 #ifdef USER_PROGRAM
+#include "synchconsole.h"
 #include "machine.h"
-#include "../userprog/frameprovider.h"
-#include "../machine/synchconsole.h"
+//#include "../userprog/frameprovider.h"
 extern Machine *machine;	// user program memory and registers
-//extern FrameProvider* frameprovider;
 extern SynchConsole* synchconsole;
 #endif
 

@@ -17,8 +17,9 @@
 #include "filesys.h"
 #include "synch.h"
 #include "bitmap.h"
+//#include "frameprovider.h"
 
-#define UserStackSize		1024	// increase this as necessary!
+#define UserStackSize	2048	// increase this as necessary!
 #define threadPages 2
 
 
@@ -31,8 +32,6 @@ class AddrSpace
     // initializing it with the program
     // stored in the file "executable"
     ~AddrSpace ();		// De-allocate an address space
-
-    void ReadAtVirtual(OpenFile*, int, int, int, TranslationEntry*, unsigned);
 
     void InitRegisters ();	// Initialize user-level CPU registers,
     // before jumping to user code
@@ -50,8 +49,6 @@ class AddrSpace
     BitMap *threadBitMap;
     Semaphore *semBitMap;
 
-    //int allocatedThreads;
-
     Semaphore *semEndMain;
     void lockEndMain();
     void freeEndMain();
@@ -66,15 +63,6 @@ class AddrSpace
     int getSpaceAllocation();
     void setSpaceAllocation(int i);
 
-/*
-    int liveThreads; // number of currently running threads
-    Semaphore *semLiveThreads; // protect the use of liveThreads
-    void UpdateThreadCount(int i);
-
-    int isFinal();
-
-    int addNewThread();
-*/
   private:
       TranslationEntry * pageTable;	// Assume linear page table translation
     // for now!
