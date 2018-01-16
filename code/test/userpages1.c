@@ -2,7 +2,7 @@
 #define THIS "aaa"
 #define THAT "bbb"
 
-const int N = 2; // Choose it large enough!
+const int N = 4; // Choose it large enough!
 
 void puts(char *s)
 {
@@ -16,13 +16,14 @@ void f(void *s)
     int i;
     for (i = 0; i < N; i++)
     	puts((char *)s);
-//    UserThreadExit();
+
 }
 
 int main()
 {
     UserThreadCreate(f, (void *) THIS);
-    f((void*) THAT);
-  //  Halt();
-    return 1;
+
+    f((void *) THAT);
+    Halt();
+    return 0;
 }

@@ -23,8 +23,8 @@
 
 #include "copyright.h"
 #include "utility.h"
-#include "translate.h"
 #include "disk.h"
+#include "translate.h"
 #ifdef CHANGED
 #include "synch.h"
 #include "frameprovider.h"
@@ -35,7 +35,7 @@
 					// the disk sector size, for
 					// simplicity
 
-#define NumPhysPages    32
+#define NumPhysPages    64
 #define MemorySize 	(NumPhysPages * PageSize)
 #define TLBSize		4		// if there is a TLB, make it small
 
@@ -191,7 +191,7 @@ class Machine {
     int getProcessNumber();
     void newProcess();
     void deleteProcess();
-		
+
   private:
     bool singleStep;		// drop back into the debugger after each
 				// simulated instruction

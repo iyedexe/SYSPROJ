@@ -1,6 +1,6 @@
 #include "frameprovider.h"
 #include "synch.h"
-#include "system.h"
+//#include "system.h"
 
 static Semaphore* semMemBitMap = new Semaphore("semFrame",1);
 
@@ -36,7 +36,7 @@ FrameProvider::GetEmptyFrame()
 
   int frame = MemBitMap->Find(); //return -1 if full
 
-  bzero(&(machine->mainMemory[PageSize * frame]), PageSize);
+ //  bzero(&(machine->mainMemory[PageSize * frame]), PageSize);
   semMemBitMap->V();
   return frame;
 

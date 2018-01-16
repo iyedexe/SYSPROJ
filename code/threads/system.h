@@ -16,7 +16,6 @@
 #include "stats.h"
 #include "timer.h"
 
-
 #define MAX_STRING_SIZE 64
 
 // Initialization and cleanup routines
@@ -34,11 +33,13 @@ extern Timer *timer;		// the hardware alarm clock
 
 
 #ifdef USER_PROGRAM
+#include "frameprovider.h"
 #include "synchconsole.h"
 #include "machine.h"
 //#include "../userprog/frameprovider.h"
 extern Machine *machine;	// user program memory and registers
 extern SynchConsole* synchconsole;
+extern FrameProvider *frameprovider;
 #endif
 
 #ifdef FILESYS_NEEDED		// FILESYS or FILESYS_STUB

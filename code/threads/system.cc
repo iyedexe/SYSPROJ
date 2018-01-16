@@ -7,6 +7,7 @@
 
 #include "copyright.h"
 #include "system.h"
+//#include "frameprovider.h"
 // This defines *all* of the global data structures used by Nachos.
 // These are all initialized and de-allocated by this file.
 
@@ -160,6 +161,8 @@ Initialize (int argc, char **argv)
 #ifdef USER_PROGRAM
     machine = new Machine (debugUserProg);	// this must come first
     synchconsole = new SynchConsole(NULL,NULL);
+    frameprovider = new FrameProvider((int)(MemorySize/PageSize));
+
 #endif
 
 #ifdef FILESYS
@@ -190,6 +193,7 @@ Cleanup ()
 #ifdef USER_PROGRAM
     delete machine;
     delete synchconsole;
+    delete frameprovider;
 #endif
 
 #ifdef FILESYS_NEEDED

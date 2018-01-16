@@ -2,7 +2,11 @@
 
 int main()
 {
+	//ForkExec("../build/putchar");
+	//ForkExec("../build/putchar");
 	ForkExec("../build/userpages0");
 	ForkExec("../build/userpages1");
-	//Halt();
+
+	Halt();
+	while(1);
 }

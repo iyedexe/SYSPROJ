@@ -21,10 +21,10 @@
 #include "noff.h"
 #include <stdio.h>
 #include <strings.h>		/* for bzero */
-#include "frameprovider.h"
+//#include "frameprovider.h"
 
 
-static FrameProvider *frameProviderProcs = new FrameProvider((int)(MemorySize/PageSize));
+//static FrameProvider *frameProviderProcs = new FrameProvider((int)(MemorySize/PageSize));
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -117,7 +117,7 @@ AddrSpace::AddrSpace (OpenFile * executable)
     numPages = divRoundUp (size, PageSize);
     size = numPages * PageSize;
 
-    ASSERT (numPages <= NumPhysPages);	// check we're not trying
+    ASSERT ((int)numPages <= frameprovider->NumAvailFrame());	// check we're not trying
     // to run anything too big --
     // at least until we have
     // virtual memory
@@ -129,7 +129,7 @@ AddrSpace::AddrSpace (OpenFile * executable)
     for (i = 0; i < numPages; i++)
       {
 	  pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	  pageTable[i].physicalPage = frameProviderProcs->GetEmptyFrame();
+	  pageTable[i].physicalPage = frameprovider->GetEmptyFrame();
 	  pageTable[i].valid = TRUE;
 	  pageTable[i].use = FALSE;
 	  pageTable[i].dirty = FALSE;
@@ -209,7 +209,7 @@ AddrSpace::~AddrSpace ()
   // delete pageTable;
   // End of modification
   for (int i = 0; i < (int)numPages; i++){
-   frameProviderProcs->ReleaseFrame(pageTable[i].physicalPage);
+   frameprovider->ReleaseFrame(pageTable[i].physicalPage);
   }
    delete [] pageTable;
 }
@@ -333,12 +333,6 @@ AddrSpace::GetTid(){
     return tidCount;
   }
 
-
-int
-AddrSpace::getSpaceAllocation(){return spaceAllocation;}
-
-void
-AddrSpace::setSpaceAllocation(int i){this->spaceAllocation = i;}
 
 void
 AddrSpace::RemoveTid(){

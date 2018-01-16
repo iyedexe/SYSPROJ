@@ -17,7 +17,6 @@
 #include "filesys.h"
 #include "synch.h"
 #include "bitmap.h"
-//#include "frameprovider.h"
 
 #define UserStackSize	2048	// increase this as necessary!
 #define threadPages 2
@@ -60,17 +59,11 @@ class AddrSpace
     int MaxThreadNumber;
     Semaphore* semThreadJoin[10];
 
-    int getSpaceAllocation();
-    void setSpaceAllocation(int i);
-
-//    FrameProvider *frameProviderProcs;
-
   private:
       TranslationEntry * pageTable;	// Assume linear page table translation
     // for now!
     unsigned int numPages;	// Number of pages in the virtual
     // address space
-    int spaceAllocation;
 };
 
 #endif // ADDRSPACE_H

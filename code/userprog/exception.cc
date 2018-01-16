@@ -116,6 +116,7 @@ ExceptionHandler (ExceptionType which)
             }
             if(machine->getProcessNumber()> 0){
               machine->deleteProcess();
+//              currentThread->space->~AddrSpace();
               currentThread->Finish();
             }
         	  interrupt->Halt ();
@@ -184,7 +185,7 @@ ExceptionHandler (ExceptionType which)
           case SC_ForkExec:{
             char stg[MAX_STRING_SIZE];
             copyStringFromMachine(4, stg, MAX_STRING_SIZE);
-            
+
             do_ForkExec(stg);
             break;
           }
