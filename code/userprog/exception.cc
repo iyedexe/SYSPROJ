@@ -116,7 +116,7 @@ ExceptionHandler (ExceptionType which)
             }
             if(machine->getProcessNumber()> 0){
               machine->deleteProcess();
-//              currentThread->space->~AddrSpace();
+              currentThread->space->~AddrSpace();
               currentThread->Finish();
             }
         	  interrupt->Halt ();
@@ -128,10 +128,10 @@ ExceptionHandler (ExceptionType which)
             break;
           }
           case SC_SynchPutString:{
-            char stg[MAX_STRING_SIZE];
+            char* stg = new char[MAX_STRING_SIZE];
             copyStringFromMachine(4, stg, MAX_STRING_SIZE);
             synchconsole->SynchPutString(stg);
-            //delete stg;
+            delete stg;
             break;
           }
           case SC_SynchGetChar:{
@@ -142,7 +142,7 @@ ExceptionHandler (ExceptionType which)
             char *stg = new char[MAX_STRING_SIZE];
             synchconsole->SynchGetString(stg , machine->ReadRegister(5));
             copyStringToMachine(4, stg, machine->ReadRegister(5));
-            //delete  stg;
+            delete  stg;
             break;
           }
           case SC_SynchPutInt:{
@@ -162,7 +162,6 @@ ExceptionHandler (ExceptionType which)
             break;
           }
           case SC_UserThreadCreate:{
-            //TODO verify if there's too many proccess in which case return -1
             int tid;
             tid = do_UserThreadCreate((int) machine->ReadRegister(4), (int) machine->ReadRegister(5));
             machine->WriteRegister(2,tid);

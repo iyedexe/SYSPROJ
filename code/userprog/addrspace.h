@@ -59,6 +59,7 @@ class AddrSpace
     int MaxThreadNumber;
     Semaphore* semThreadJoin[10];
 
+    int getNumPages();
   private:
       TranslationEntry * pageTable;	// Assume linear page table translation
     // for now!

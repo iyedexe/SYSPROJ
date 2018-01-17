@@ -10,6 +10,7 @@ static Semaphore *writeDone;
 static Semaphore *writeMutex;
 static Semaphore *readMutex;
 static Semaphore *putStringMutex;
+static Semaphore *getStringMutex;
 
 
 static void ReadAvail(int arg) {readAvail->V(); }
@@ -22,6 +23,7 @@ SynchConsole::SynchConsole(char *readFile , char *writeFile){
   writeMutex = new Semaphore("writeMutex", 1);
   readMutex  = new Semaphore("readMutex", 1);
   putStringMutex = new Semaphore("putStringMutex", 1);
+  getStringMutex = new Semaphore("getStringMutex", 1);
   console = new Console (readFile, writeFile, ReadAvail, WriteDone, 0);
 }
 
@@ -57,6 +59,7 @@ void SynchConsole::SynchPutString(const char s[]){
 }
 
 void SynchConsole::SynchGetString(char *s, int n){
+  getStringMutex->P();
   if(n>MAX_STRING_SIZE){
     return;
   }
@@ -80,6 +83,8 @@ void SynchConsole::SynchGetString(char *s, int n){
     }
     s[i] = '\0';
   }
+  getStringMutex->V();
+
 }
 
 //#endif //CHANGED

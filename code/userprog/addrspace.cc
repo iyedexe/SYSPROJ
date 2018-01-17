@@ -340,3 +340,8 @@ AddrSpace::RemoveTid(){
       tidCount--;
       semThreadId->V();
 }
+
+int
+AddrSpace::getNumPages(){
+  return (int)numPages;
+}
