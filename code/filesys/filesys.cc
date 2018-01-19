@@ -50,6 +50,7 @@
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "system.h"
 
 // Sectors containing the file headers for the bitmap of free sectors,
 // and the directory of files.  These file headers are placed in well-known 
@@ -63,6 +64,11 @@
 #define FreeMapFileSize 	(NumSectors / BitsInByte)
 #define NumDirEntries 		10
 #define DirectoryFileSize 	(sizeof(DirectoryEntry) * NumDirEntries)
+#define DIR_NUMBER_PATH 10
+#define DIR_NAME_MAX 50
+#define FILE_NAME_MAX 50
+
+#define MAX 10
 
 //----------------------------------------------------------------------
 // FileSystem::FileSystem
@@ -96,8 +102,8 @@ FileSystem::FileSystem(bool format)
     // Second, allocate space for the data blocks containing the contents
     // of the directory and bitmap files.  There better be enough space!
 
-	ASSERT(mapHdr->Allocate(freeMap, FreeMapFileSize));
-	ASSERT(dirHdr->Allocate(freeMap, DirectoryFileSize));
+	ASSERT(mapHdr->Allocate(freeMap, FreeMapFileSize, 1, 0));
+	ASSERT(dirHdr->Allocate(freeMap, DirectoryFileSize, 2, 1));
 
     // Flush the bitmap and directory FileHeaders back to disk
     // We need to do this before we can "Open" the file, since open
@@ -112,8 +118,8 @@ FileSystem::FileSystem(bool format)
     // The file system operations assume these two files are left open
     // while Nachos is running.
 
-        freeMapFile = new OpenFile(FreeMapSector);
-        directoryFile = new OpenFile(DirectorySector);
+    freeMapFile = new OpenFile(FreeMapSector);
+    directoryFile = new OpenFile(DirectorySector);
      
     // Once we have the files "open", we can write the initial version
     // of each file back to disk.  The directory at this point is completely
@@ -140,6 +146,10 @@ FileSystem::FileSystem(bool format)
         freeMapFile = new OpenFile(FreeMapSector);
         directoryFile = new OpenFile(DirectorySector);
     }
+
+    strcat(this->dir, "/");
+    for(int i = 0; i < OPEN_FILE_MAX; i++)
+        OpenedFilesTracker[i] = 0;
 }
 
 //----------------------------------------------------------------------
@@ -172,45 +182,98 @@ FileSystem::FileSystem(bool format)
 //----------------------------------------------------------------------
 
 bool
-FileSystem::Create(const char *name, int initialSize)
+FileSystem::Create(const char *nm, int initialSize)
 {
-    Directory *directory;
+    Directory* directory;
+    Directory *parentDirectory;
     BitMap *freeMap;
     FileHeader *hdr;
-    int sector;
+    int path_number = 0;
     bool success;
+    char parsed_path[DIR_NUMBER_PATH][FILE_NAME_MAX];
 
-    DEBUG('f', "Creating file %s, size %d\n", name, initialSize);
+    char name[FILE_NAME_MAX];
+    strcpy(name, nm);
+
+    if(strlen(name) > FILE_NAME_MAX)
+    {
+        fprintf(stderr, "%s\n", "The name of the file is too long");
+        return false;
+    }
 
     directory = new Directory(NumDirEntries);
     directory->FetchFrom(directoryFile);
 
-    if (directory->Find(name) != -1)
-      success = FALSE;			// file is already in directory
-    else {	
-        freeMap = new BitMap(NumSectors);
-        freeMap->FetchFrom(freeMapFile);
-        sector = freeMap->Find();	// find a sector to hold the file header
-    	if (sector == -1) 		
-            success = FALSE;		// no free block for file header 
-        else if (!directory->Add(name, sector))
-            success = FALSE;	// no space in directory
-	else {
-    	    hdr = new FileHeader;
-	    if (!hdr->Allocate(freeMap, initialSize))
-            	success = FALSE;	// no space on disk for data
-	    else {	
-	    	success = TRUE;
-		// everthing worked, flush all changes back to disk
-    	    	hdr->WriteBack(sector); 		
-    	    	directory->WriteBack(directoryFile);
-    	    	freeMap->WriteBack(freeMapFile);
-	    }
-            delete hdr;
-	}
-        delete freeMap;
+    int old_sector = directory->getTableZero().sector;
+
+    if(!this->goToParent(name, parsed_path, path_number))
+    {
+        fprintf(stderr, "%s\n", "Failed to reach the parent folder");
+        delete directory;
+        return false;
     }
+
+    parentDirectory = new Directory(NumDirEntries);
+    parentDirectory->FetchFrom(this->directoryFile);
+
+    if(parentDirectory->getDirSpaceRemaining() == 0) 
+    {
+        fprintf(stderr, "%s\n", "The parent folder is full");
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+
+    if(parentDirectory->Find(name) != -1)
+    {
+        fprintf(stderr, "%s\n", "The folder already exists");
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+	
+    freeMap = new BitMap(NumSectors);
+    freeMap->FetchFrom(freeMapFile);
+    int new_sector = freeMap->Find();	// find a sector to hold the file header
+
+    if(new_sector == -1)
+    {
+        fprintf(stderr, "%s\n", "No bit are free");
+        delete freeMap;
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+
+    if(!parentDirectory->Add(parsed_path[path_number - 1], new_sector))
+        success = false;
+    else
+    {   
+        hdr = new FileHeader;
+        if(!hdr->Allocate(freeMap, initialSize, 1, new_sector))
+            success = false;
+
+        parentDirectory->minSpaceRemaining();
+
+        hdr->WriteBack(new_sector);
+        parentDirectory->WriteBack(directoryFile);
+        freeMap->WriteBack(freeMapFile);
+
+        success = true;
+    }
+
+    delete freeMap;
+    delete hdr;
     delete directory;
+    delete parentDirectory;
+        
+    //go to the old position
+    OpenFile* fileDirectory = new OpenFile(old_sector);
+    directoryFile = fileDirectory;
+
+    delete fileDirectory;
+
+    printf("succes = %d\n", success);
     return success;
 }
 
@@ -234,8 +297,16 @@ FileSystem::Open(const char *name)
     DEBUG('f', "Opening file %s\n", name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
-    if (sector >= 0) 		
-	openFile = new OpenFile(sector);	// name was found in directory 
+    if (sector >= 0) // name was found in directory
+    {
+        if(!findValue(sector))
+        {
+            openFile = new OpenFile(sector);
+            currentThread->addFile(sector);
+            currentThread->count_file +=1;
+        }
+    } 		
+		 
     delete directory;
     return openFile;				// return NULL if not found
 }
@@ -265,10 +336,23 @@ FileSystem::Remove(const char *name)
     directory = new Directory(NumDirEntries);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name);
+    
     if (sector == -1) {
        delete directory;
        return FALSE;			 // file not found 
     }
+
+    OpenFile* new_file = new OpenFile(directory->getTablePos(0).sector);
+    if(new_file->Length() == DirectoryFileSize)
+    {
+        if(directory->getDirSpaceRemaining() != NumDirEntries - 2)
+        {
+            fprintf(stderr, "%s\n", "The folder is not empty");
+            return FALSE;
+        }
+    }
+
+
     fileHdr = new FileHeader;
     fileHdr->FetchFrom(sector);
 
@@ -293,14 +377,50 @@ FileSystem::Remove(const char *name)
 //----------------------------------------------------------------------
 
 void
-FileSystem::List()
+FileSystem::List(char* space)
 {
     Directory *directory = new Directory(NumDirEntries);
-
     directory->FetchFrom(directoryFile);
-    directory->List();
-    delete directory;
+
+    OpenFile* former_file;
+    OpenFile* new_file;
+
+    int old_sector = directory->getTableZero().sector;
+
+    char sub[500];
+    strcat(space, "    ");
+    strcpy(sub, space);
+
+    printf("%s%s\n", space, directory->getTablePos(0).name);
+    printf("%s%s\n", space, directory->getTablePos(1).name);
+    for (int i = 2; i < directory->getTableSize(); i++)
+    {
+        if (directory->getTablePos(i).inUse)
+        {
+            new_file = new OpenFile(directory->getTablePos(i).sector);
+
+            if(new_file->Length() != DirectoryFileSize)
+                printf("%s%s : file\n", space, directory->getTablePos(i).name);
+            else
+                printf("%s%s : folder\n", space, directory->getTablePos(i).name);
+            
+            if(new_file->Length() == DirectoryFileSize)
+            {
+                goIntoDir(directory->getTablePos(i).name);
+                List(space); 
+            }
+        }
+        former_file = new OpenFile(old_sector);
+        this->directoryFile = former_file;
+        strcpy(space, sub);
+    }
+
+   former_file = new OpenFile(old_sector);
+
+   this->directoryFile = former_file;
+   delete directory;
 }
+
 
 //----------------------------------------------------------------------
 // FileSystem::Print
@@ -338,4 +458,298 @@ FileSystem::Print()
     delete dirHdr;
     delete freeMap;
     delete directory;
-} 
+}
+
+//step 5
+bool 
+FileSystem::goIntoDir(char *name) //cd 
+{
+
+    //get the full directory
+    Directory *directory = new Directory(NumDirEntries);
+    directory->FetchFrom(this->directoryFile);
+
+    //test if the folder exists
+    int sector = directory->Find(name);
+
+    if(sector == -1)
+    {
+        fprintf(stderr, "%s\n", "Directory not found.");
+        delete directory;
+        return false;
+    }
+
+    //test if it is folder
+    OpenFile* newDirectory = new OpenFile(sector);
+
+    if(newDirectory->Length() != DirectoryFileSize)
+    {
+        fprintf(stderr, "%s\n", "This is not a folder");
+        delete directory;
+        delete newDirectory;
+        return false;
+    }
+
+    this->directoryFile = newDirectory;
+
+    delete directory;
+    //delete newDirectory;
+
+    strcat(this->dir, name);
+    strcat(this->dir, "/");
+    //printf("\nposition = %s\n", this->dir);
+    
+    return true;
+}
+
+bool 
+FileSystem::parsing(char* path, char parsed[][DIR_NAME_MAX], int &path_number)
+{
+    char* result = path;
+    int i = 0;
+
+    if(path[0] == '/')
+        strsep(&result, "/");
+
+    while(result != NULL)
+    {
+        if(i < DIR_NUMBER_PATH - 1)
+        {
+           strcpy(parsed[i], strsep(&result, "/"));
+           i += 1; 
+        }
+        else
+        {
+            fprintf(stderr, "%s\n", "The path contain too many access");
+            return false;
+        }
+    }
+
+    path_number = i;
+    return true;
+}
+
+bool 
+FileSystem::goToParent(char* name, char parsed_path[][DIR_NAME_MAX], int &path_number)
+{
+    OpenFile* new_position;
+
+    int verif = false;
+    for(int i = 0; i < DIR_NAME_MAX; i++)
+    {
+        if(!name[i] == '\0')
+        {
+            if(name[i] == '/')
+                verif = true;
+        }
+        else
+            break;
+    }
+
+    //if it is not a path "mkdir blabla" -> it is done it the current folder
+    if(verif == false)
+    {
+        printf("Current folder\n");
+        strcpy(parsed_path[0], name);
+        path_number = 1;
+        return true;
+    }
+    //if it is a path -> parse
+    else
+    {
+        printf("Path folder\n");
+
+        char sub[DIR_NAME_MAX];
+        strcpy(sub, name);
+
+        char* tempo = new char[DIR_NAME_MAX];
+        strcpy(tempo, name);
+        //from the root
+        if (name[0] == '/') 
+        {
+            new_position = new OpenFile(1);
+            this->directoryFile = new_position;
+            strsep(&tempo, "/");
+            strcpy(name, tempo);
+        }
+
+        if(!parsing(sub, parsed_path, path_number))
+        {
+            fprintf(stderr, "%s\n", "Error during the parsing");
+            return false;
+        }
+
+        printf("path_number = %d\n", path_number);
+
+        if(path_number == 1)
+            return true;
+
+        for(int i = 0; i < path_number - 1; i++)
+        {
+            printf("%s\n", parsed_path[i]);
+            if(!goIntoDir(parsed_path[i]))
+            {
+                fprintf(stderr, "%s\n", "Error in the path");
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool
+FileSystem::mkdir(char* name)
+{
+    BitMap *freeMap;
+    FileHeader *hdr;
+    Directory *directory;
+    Directory *parentDirectory;
+    Directory *newDirectory;
+    OpenFile *fileDirectory;
+    int success;
+    int path_number = 0;
+    char parsed_path[DIR_NUMBER_PATH][DIR_NAME_MAX];
+
+    if(strlen(name) > DIR_NAME_MAX)
+    {
+        fprintf(stderr, "%s\n", "The name of the folder is too long");
+        return false;
+    }
+
+    //get the full directory
+    directory = new Directory(NumDirEntries);
+
+    //save of the current position
+    int old_sector = directory->getTableZero().sector;
+
+    //move to the wanted folder
+    if(!this->goToParent(name, parsed_path, path_number))
+    {
+        fprintf(stderr, "%s\n", "Failed to reach the parent folder");
+        delete directory;
+        return false;
+    }
+
+    // Parent directory
+    parentDirectory = new Directory(NumDirEntries);
+    parentDirectory->FetchFrom(this->directoryFile);
+
+    if(parentDirectory->getDirSpaceRemaining() == 0) 
+    {
+        fprintf(stderr, "%s\n", "The parent folder is full");
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+
+    if(parentDirectory->Find(name) != -1)
+    {
+        fprintf(stderr, "%s\n", "The folder already exists");
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+
+    //Allocation for the new folder
+    freeMap = new BitMap(NumSectors);
+    freeMap->FetchFrom(freeMapFile);
+
+    int new_sector = freeMap->Find();
+    printf("new_sector == %d\n", new_sector);
+
+    if(new_sector == -1)
+    {
+        fprintf(stderr, "%s\n", "No bit are free");
+        delete freeMap;
+        delete parentDirectory;
+        delete directory;
+        return false;
+    }
+
+    //make directory
+    int parent_sector = parentDirectory->getTableZero().sector;
+
+    if(!parentDirectory->Add(parsed_path[path_number - 1], new_sector))
+        success = false;
+    else
+    {   
+        hdr = new FileHeader;
+        if(!hdr->Allocate(freeMap, DirectoryFileSize, 2, new_sector))
+            success = false;
+
+        parentDirectory->minSpaceRemaining();
+        newDirectory = new Directory(NumDirEntries, new_sector, parent_sector);
+        fileDirectory = new OpenFile(new_sector); //needed for WriteBack(OpenFile*)
+        
+        fileDirectory->getFileHeader()->setHdrType(2);
+
+        hdr->WriteBack(new_sector);
+        newDirectory->WriteBack(fileDirectory);
+        parentDirectory->WriteBack(directoryFile);
+        freeMap->WriteBack(freeMapFile);
+
+        success = true;
+    }
+
+    delete freeMap;
+    delete hdr;
+    delete directory;
+    delete parentDirectory;
+    delete newDirectory;
+        
+    //go to the old position
+    fileDirectory = new OpenFile(old_sector);
+    directoryFile = fileDirectory;
+
+    delete fileDirectory;
+
+    return success;
+}
+
+bool 
+FileSystem::addFile(int sector)
+{
+    for(int i = 0; i < OPEN_FILE_MAX; i++)
+    {
+        if(OpenedFilesTracker[i] == 0)
+        {
+            //printf("File in sector %d added\n", sector);
+            OpenedFilesTracker[i] = sector;
+            return TRUE;
+        }
+    }
+
+    fprintf(stderr, "%s\n", "You reached the maximum number of opened files in the same time");
+    return FALSE;
+}
+
+bool 
+FileSystem::rmFile(int sector)
+{
+    for(int i = 0; i < OPEN_FILE_MAX; i++)
+    {
+        if(OpenedFilesTracker[i] == sector)
+        {
+            OpenedFilesTracker[i] = 0;
+            return TRUE;
+        }
+    }
+
+    fprintf(stderr, "%s\n", "The sector is not used by a file");
+    return FALSE;
+}
+
+bool 
+FileSystem::findValue(int sector)
+{
+    for(int i = 0; i < OPEN_FILE_MAX; i++)
+    {
+        if(OpenedFilesTracker[i] == sector)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+

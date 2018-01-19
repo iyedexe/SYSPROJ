@@ -38,6 +38,7 @@ Thread::Thread (const char *threadName)
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
+
 #ifdef USER_PROGRAM
     space = NULL;
     // FBT: Need to initialize special registers of simulator to 0
@@ -46,6 +47,11 @@ Thread::Thread (const char *threadName)
     for (int r=NumGPRegs; r<NumTotalRegs; r++)
       userRegisters[r] = 0;
 #endif
+    for(int i = 0; i < MAX; i++)
+    {
+      openFileTable[i] = 0;
+    }
+    count_file = 0;
 }
 
 //----------------------------------------------------------------------
@@ -420,3 +426,35 @@ Thread::setId(int i){
 }
 
 #endif
+
+bool 
+Thread::addFile(int sector)
+{
+  for(int i = 0; i < MAX; i++)
+  {
+    if(openFileTable[i] == 0)
+    {
+      openFileTable[i] = sector;
+      return TRUE;
+    }
+  }
+
+  fprintf(stderr, "%s\n", "Too many file opened by this thread");
+  return FALSE;
+}
+
+bool 
+Thread::rmFile(int sector)
+{
+  for(int i = 0; i < MAX; i++)
+  {
+    if(openFileTable[i] == sector)
+    {
+      openFileTable[i] = 0;
+      return TRUE;
+    }
+  }
+
+  fprintf(stderr, "%s\n", "Sector not found in the thread");
+  return FALSE;
+}

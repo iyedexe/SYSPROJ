@@ -143,7 +143,7 @@ main (int argc, char **argv)
 		Print (*(argv + 1));
 		argCount = 2;
 	    }
-	  else if (!strcmp (*argv, "-r"))
+	  else if (!strcmp (*argv, "-rm"))
 	    {			// remove Nachos file
 		ASSERT (argc > 1);
 		fileSystem->Remove (*(argv + 1));
@@ -151,16 +151,33 @@ main (int argc, char **argv)
 	    }
 	  else if (!strcmp (*argv, "-l"))
 	    {			// list Nachos directory
-		fileSystem->List ();
+	    	char space[500];
+	    	bzero(space, 500);
+			fileSystem->List (space);
 	    }
 	  else if (!strcmp (*argv, "-D"))
 	    {			// print entire filesystem
-		fileSystem->Print ();
+			fileSystem->Print ();
 	    }
 	  else if (!strcmp (*argv, "-t"))
 	    {			// performance test
 		PerformanceTest ();
 	    }
+	  else if(!strcmp (*argv, "-mkdir"))
+	  {
+	  	ASSERT (argc > 1);
+	  	return fileSystem->mkdir(*(argv + 1));
+	  }
+	  else if(!strcmp (*argv, "-cd"))
+	  {
+	  	ASSERT (argc > 1);
+	  	fileSystem->goIntoDir(*(argv + 1));
+	  }
+	  else if(!strcmp (*argv, "-touch"))
+	  {
+	  	ASSERT (argc > 2);
+	  	fileSystem->Create(*(argv + 1), atoi(*(argv + 2)));
+	  }
 #endif // FILESYS
 #ifdef NETWORK
 	  if (!strcmp (*argv, "-o"))

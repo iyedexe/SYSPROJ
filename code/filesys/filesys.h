@@ -35,6 +35,10 @@
 #ifndef FS_H
 #define FS_H
 
+#define DIR_NAME_MAX 50
+#define DIR_NUMBER_PATH 10
+#define OPEN_FILE_MAX 50
+
 #include "copyright.h"
 #include "openfile.h"
 
@@ -81,15 +85,32 @@ class FileSystem {
 
     bool Remove(const char *name); 	// Delete a file (UNIX unlink)
 
-    void List();			// List all the files in the file system
+    void List(char* space);			// List all the files in the file system
 
     void Print();			// List all the files and their contents
+
+    //step 5
+    bool goIntoDir(char* name);
+
+    bool goToParent(char * name, char parsed_path[][DIR_NAME_MAX], int &path_number);
+
+    bool mkdir(char* name);
+
+    bool parsing(char* path, char parsed_path[][DIR_NAME_MAX], int &path_number);
+
+    bool rmFile(int sector);
+
+    bool addFile(int sector);
+
+    bool findValue(int sector);
 
   private:
    OpenFile* freeMapFile;		// Bit map of free disk blocks,
 					// represented as a file
    OpenFile* directoryFile;		// "Root" directory -- list of 
 					// file names, represented as a file
+   char dir[DIR_NUMBER_PATH];
+   int OpenedFilesTracker[OPEN_FILE_MAX];
 };
 
 #endif // FILESYS

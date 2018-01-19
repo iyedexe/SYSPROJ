@@ -39,7 +39,9 @@
 
 #include "copyright.h"
 #include "utility.h"
+#include "../filesys/openfile.h"
 
+#define MAX 10
 
 #ifdef USER_PROGRAM
 #include "machine.h"
@@ -106,16 +108,21 @@ class Thread
     // overflowed its stack
     void setStatus (ThreadStatus st)
     {
-	status = st;
+	   status = st;
     }
     const char *getName ()
     {
-	return (name);
+	   return (name);
     }
     void Print ()
     {
-	printf ("%s, ", name);
+	   printf ("%s, ", name);
     }
+
+    int openFileTable[MAX];
+    int count_file;
+    bool addFile(int sector);
+    bool rmFile(int sector);
 
   private:
     // some of the private data for this class is listed above
@@ -125,6 +132,8 @@ class Thread
     // (If NULL, don't deallocate stack)
     ThreadStatus status;	// ready, running or blocked
     const char *name;
+
+    
 
     void StackAllocate (VoidFunctionPtr func, int arg);
     // Allocate a stack for thread.

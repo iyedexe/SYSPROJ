@@ -15,6 +15,7 @@
 #include "filehdr.h"
 #include "openfile.h"
 #include "system.h"
+#include "filehdr.h"
 
 #include <strings.h> /* for bzero */
 
@@ -31,6 +32,11 @@ OpenFile::OpenFile(int sector)
     hdr = new FileHeader;
     hdr->FetchFrom(sector);
     seekPosition = 0;
+
+    if(sector != 0 && sector != 1) //map and directory
+    {
+        fileSystem->addFile(sector); 
+    }
 }
 
 //----------------------------------------------------------------------
@@ -40,6 +46,10 @@ OpenFile::OpenFile(int sector)
 
 OpenFile::~OpenFile()
 {
+    if(hdr->getHdrSector() != 0 && hdr->getHdrSector() != 1) //map and directory
+    {
+        fileSystem->rmFile(hdr->getHdrSector()); 
+    }
     delete hdr;
 }
 
@@ -194,3 +204,6 @@ OpenFile::Length()
 { 
     return hdr->FileLength(); 
 }
+
+FileHeader* 
+OpenFile::getFileHeader(){return hdr;}

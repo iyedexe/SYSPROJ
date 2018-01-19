@@ -48,6 +48,27 @@ FileHeader::Allocate(BitMap *freeMap, int fileSize)
 
     for (int i = 0; i < numSectors; i++)
 	dataSectors[i] = freeMap->Find();
+
+    hdrType = 0;
+    hdrSector = 0;
+    return TRUE;
+}
+
+bool
+FileHeader::Allocate(BitMap *freeMap, int fileSize, int type, int sector)
+{ 
+    numBytes = fileSize;
+    numSectors  = divRoundUp(fileSize, SectorSize);
+    if (freeMap->NumClear() < numSectors)
+    return FALSE;       // not enough space
+
+    for (int i = 0; i < numSectors; i++)
+    dataSectors[i] = freeMap->Find();
+    
+
+    hdrType = type;
+    hdrSector = sector;
+
     return TRUE;
 }
 
@@ -148,3 +169,12 @@ FileHeader::Print()
     }
     delete [] data;
 }
+
+int
+FileHeader::getHdrType(){return this->hdrType;}
+
+void
+FileHeader::setHdrType(int value){this->hdrType = value;}
+
+int 
+FileHeader::getHdrSector(){return this->hdrSector;};

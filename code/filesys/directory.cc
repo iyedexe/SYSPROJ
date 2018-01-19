@@ -25,6 +25,8 @@
 #include "filehdr.h"
 #include "directory.h"
 
+#define NumDirEntries       10
+
 //----------------------------------------------------------------------
 // Directory::Directory
 // 	Initialize a directory; initially, the directory is completely
@@ -41,6 +43,20 @@ Directory::Directory(int size)
     tableSize = size;
     for (int i = 0; i < tableSize; i++)
 	table[i].inUse = FALSE;
+
+    init(1, 1); //root (current, father)
+    dirSpaceRemaining = size - 2;
+}
+
+Directory::Directory(int size, int new_sector, int current_sector)
+{
+    table = new DirectoryEntry[size];
+    tableSize = size;
+    for (int i = 0; i < tableSize; i++)
+    table[i].inUse = FALSE;
+
+    init(new_sector, current_sector); //root (current, father)
+    dirSpaceRemaining = size - 2;
 }
 
 //----------------------------------------------------------------------
@@ -166,12 +182,13 @@ Directory::Remove(const char *name)
 // 	List all the file names in the directory. 
 //----------------------------------------------------------------------
 
+
 void
 Directory::List()
 {
    for (int i = 0; i < tableSize; i++)
-	if (table[i].inUse)
-	    printf("%s\n", table[i].name);
+    if (table[i].inUse)
+        printf("%s\n", table[i].name);
 }
 
 //----------------------------------------------------------------------
@@ -195,3 +212,45 @@ Directory::Print()
     printf("\n");
     delete hdr;
 }
+
+bool 
+Directory::init(int current, int father)
+{
+    if(table[0].inUse || table[1].inUse)
+    {
+        fprintf(stderr, "%s\n", ". or .. already used");
+        return false;
+    }
+
+    table[0].sector = current;
+    table[1].sector = father;
+
+    table[0].inUse = true;
+    table[1].inUse = true;
+
+    strcpy(table[0].name, ".");
+    strcpy(table[1].name, "..");
+
+    return true;
+}
+
+int 
+Directory::getDirSpaceRemaining(){return this->dirSpaceRemaining;}
+
+void 
+Directory::minSpaceRemaining(){this->dirSpaceRemaining -= 1;}
+
+DirectoryEntry 
+Directory::getTableZero(){return this->table[0];}
+
+int
+Directory::getTableSize(){return this->tableSize;}
+
+DirectoryEntry 
+Directory::getTablePos(int pos){return this->table[pos];}
+
+
+
+
+
+

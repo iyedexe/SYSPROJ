@@ -52,6 +52,8 @@ class Directory {
   public:
     Directory(int size); 		// Initialize an empty directory
 					// with space for "size" files
+    Directory(int, int ,int);
+
     ~Directory();			// De-allocate the directory
 
     void FetchFrom(OpenFile *file);  	// Init directory contents from disk
@@ -71,6 +73,16 @@ class Directory {
 					//  of the directory -- all the file
 					//  names and their contents.
 
+    bool init(int current, int father); // link . and .. return false if it failed
+
+    int getDirSpaceRemaining();
+    void minSpaceRemaining();
+    int getTableSize();
+
+    DirectoryEntry getTableZero();
+    DirectoryEntry getTablePos(int pos);
+
+
   private:
     int tableSize;			// Number of directory entries
     DirectoryEntry *table;		// Table of pairs: 
@@ -78,6 +90,7 @@ class Directory {
 
     int FindIndex(const char *name);	// Find the index into the directory 
 					//  table corresponding to "name"
+    int dirSpaceRemaining;
 };
 
 #endif // DIRECTORY_H

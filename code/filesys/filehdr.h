@@ -40,6 +40,8 @@ class FileHeader {
     bool Allocate(BitMap *bitMap, int fileSize);// Initialize a file header, 
 						//  including allocating space 
 						//  on disk for the file data
+    bool Allocate(BitMap *bitMap, int fileSize, int type, int sector);
+
     void Deallocate(BitMap *bitMap);  		// De-allocate this file's 
 						//  data blocks
 
@@ -56,11 +58,21 @@ class FileHeader {
 
     void Print();			// Print the contents of the file.
 
+    int getHdrType(); //return the type of the header
+                      //1 for a file
+                      //2 for a folder
+                      //....
+    void setHdrType(int value);
+
+    int getHdrSector();
+
   private:
     int numBytes;			// Number of bytes in the file
     int numSectors;			// Number of data sectors in the file
     int dataSectors[NumDirect];		// Disk sector numbers for each data 
 					// block in the file
+    int hdrType;
+    int hdrSector;
 };
 
 #endif // FILEHDR_H
