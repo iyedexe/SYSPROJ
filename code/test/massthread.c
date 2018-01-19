@@ -1,12 +1,12 @@
 #include "syscall.h"
 
-#define NbThread 3
+#define NbThread 5
 
-void thread(int *i){
-	if(*i!=-1){
-//		UserThreadJoin(i[0]);
+void thread(int i){
+	if(i!=-1){
+		UserThreadJoin(i-1	);
 		SynchPutString("Thread ");
-		SynchPutInt(i[0]);
+		SynchPutInt(i);
 		PutChar('\n');
 	}
 	else{
@@ -30,10 +30,10 @@ int main()
 {
 	int i,tmp,param[NbThread+1];
 	param[0]=-1;
-	tmp=UserThreadCreate(thread,(void *)(param));
+	tmp=UserThreadCreate(thread,(void *)(param[0]));
 	param[1]=tmp;
 	for(i=1;i<NbThread;i++){
-		tmp=UserThreadCreate(thread,(void *)(param+i));
+		tmp=UserThreadCreate(thread,(void *)(param[i]));
 		param[i+1]=tmp;
 }
 	Halt();

@@ -36,7 +36,7 @@ FrameProvider::GetEmptyFrame()
 
   int frame = MemBitMap->Find(); //return -1 if full
 
-  bzero(&(machine->mainMemory[PageSize * frame]), PageSize);
+   bzero(&(machine->mainMemory[PageSize * frame]), PageSize);
   semMemBitMap->V();
   return frame;
 

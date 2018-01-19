@@ -1,6 +1,6 @@
-// synch.cc 
+// synch.cc
 //      Routines for synchronizing threads.  Three kinds of
-//      synchronization routines are defined here: semaphores, locks 
+//      synchronization routines are defined here: semaphores, locks
 //      and condition variables (the implementation of the last two
 //      are left to the reader).
 //
@@ -18,7 +18,7 @@
 // that be disabled or enabled).
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
@@ -71,7 +71,7 @@ Semaphore::P ()
 	  queue->Append ((void *) currentThread);	// so go to sleep
 	  currentThread->Sleep ();
       }
-    value--;			// semaphore available, 
+    value--;			// semaphore available,
     // consume its value
 
     (void) interrupt->SetLevel (oldLevel);	// re-enable interrupts
@@ -98,43 +98,76 @@ Semaphore::V ()
     (void) interrupt->SetLevel (oldLevel);
 }
 
-// Dummy functions -- so we can compile our later assignments 
-// Note -- without a correct implementation of Condition::Wait(), 
+// Dummy functions -- so we can compile our later assignments
+// Note -- without a correct implementation of Condition::Wait(),
 // the test case in the network assignment won't work!
 Lock::Lock (const char *debugName)
 {
+  lockOwner = NULL;
+  sem = new Semaphore(debugName,1);
 }
 
 Lock::~Lock ()
 {
+  delete sem;
 }
 void
 Lock::Acquire ()
 {
+  sem->P();
+  lockOwner = currentThread;
+
 }
 void
 Lock::Release ()
 {
+  sem->V();
+  lockOwner = NULL;
 }
+
 
 Condition::Condition (const char *debugName)
 {
+  name = debugName;
+  waitQueue = new List;
 }
 
 Condition::~Condition ()
 {
+  delete waitQueue;
 }
 void
 Condition::Wait (Lock * conditionLock)
 {
-    ASSERT (FALSE);
+  Semaphore *waiter;
+
+//  ASSERT(conditionLock->IsHeldByCurrentThread());
+
+  waiter = new Semaphore("condition", 0);
+  waitQueue->Append(waiter);
+  conditionLock->Release();
+  waiter->P();
+  conditionLock->Acquire();
+  delete waiter;
 }
 
 void
 Condition::Signal (Lock * conditionLock)
 {
+  Semaphore *waiter;
+
+  // ASSERT(conditionLock->IsHeldByCurrentThread());
+
+   if (!waitQueue->IsEmpty()) {
+       waiter = (Semaphore *) waitQueue->Remove();
+ waiter->V();
+  }
 }
+
 void
 Condition::Broadcast (Lock * conditionLock)
 {
+  while (!waitQueue->IsEmpty()) {
+       Signal(conditionLock);
+}
 }

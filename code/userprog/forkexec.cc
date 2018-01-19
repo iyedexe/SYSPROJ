@@ -31,12 +31,12 @@ int do_ForkExec (char *filename)
         return -1;
     }
 
-    printf("XXXXXXXXXXX>>>>>>>>>>>FORKED<<<<<<<<<<<<<XXXXXXXXX\n" );
+//    printf("XXXXXXXXXXX>>>>>>>>>>>FORKED<<<<<<<<<<<<<XXXXXXXXX\n" );
     SpaceContainer* sarg = new SpaceContainer; // comme pour les threads, on sérialise l'espace mémoir qu'on souhaite affecter à notre processus
     sarg->space = space;
+    machine->newProcess();
     newThread->Fork(StartForkedProcess,(int)sarg); // on fork le processus père
 
-    machine->newProcess();
     delete executable;
 
     return 0;

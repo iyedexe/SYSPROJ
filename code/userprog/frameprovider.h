@@ -2,11 +2,11 @@
 #define FRAMEPROVIDER_H
 
 //#include "system.h"
-#include "addrspace.h"
+//#include "addrspace.h"
 #include "bitmap.h"
 #include <strings.h>
-#include "filesys.h"
-#include "synch.h"
+//#include "filesys.h"
+//#include "synch.h"
 
 class FrameProvider
 {

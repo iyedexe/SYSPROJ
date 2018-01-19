@@ -78,7 +78,6 @@ Machine::Machine(bool debug)
     processNumber = 0;
     semProcessNumber = new Semaphore("semProcessNumber", 1);
 
-
 		singleStep = debug;
     CheckEndian();
 }
